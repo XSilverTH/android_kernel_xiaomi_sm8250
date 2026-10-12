@@ -1,19 +1,16 @@
-Linux kernel
-============
+# RvKernel
 
-There are several guides for kernel developers and users. These guides can
-be rendered in a number of formats, like HTML and PDF. Please read
-Documentation/admin-guide/README.rst first.
+SukiSU Ultra v4.2.0 (40900) integrated.
 
-In order to build the documentation, use ``make htmldocs`` or
-``make pdfdocs``.  The formatted documentation can also be read online at:
+## Build
 
-    https://www.kernel.org/doc/html/latest/
+Use AOSP Clang r574158 with Polly support.
 
-There are various text files in the Documentation/ subdirectory,
-several of them using the Restructured Text markup notation.
-See Documentation/00-INDEX for a list of what is contained in each file.
-
-Please read the Documentation/process/changes.rst file, as it contains the
-requirements for building and running the kernel, and information about
-the problems which may result by upgrading your kernel.
+```sh
+export CLANG_DIR=/path/to/clang-r574158
+export PATH="$CLANG_DIR/bin:$PATH"
+export LD_LIBRARY_PATH="$CLANG_DIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export LD_PRELOAD="$CLANG_DIR/lib/libLLVM.so"
+make O=out ARCH=arm64 LLVM=1 LLVM_IAS=1 vendor/xiaomi/alioth_defconfig
+make O=out -j"$(nproc)" ARCH=arm64 LLVM=1 LLVM_IAS=1 Image dtbs dtbo.img dtb.img
+```

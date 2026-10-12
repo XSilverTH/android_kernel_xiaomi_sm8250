@@ -1744,6 +1744,45 @@ dput_and_out:
 out:
 	return retval;
 }
+#ifdef CONFIG_KSU
+/*
+ * KernelSU already resolved the mountpoint with kern_path().  Consume that
+ * path reference using the same checks and unmount implementation as umount.
+ */
+int path_umount(struct path *path, int flags)
+{
+	struct mount *mnt = real_mount(path->mnt);
+	int retval;
+
+	if (flags & ~(MNT_FORCE | MNT_DETACH | MNT_EXPIRE | UMOUNT_NOFOLLOW)) {
+		retval = -EINVAL;
+		goto out;
+	}
+
+	if (!may_mount()) {
+		retval = -EPERM;
+		goto out;
+	}
+
+	retval = -EINVAL;
+	if (path->dentry != path->mnt->mnt_root)
+		goto out;
+	if (!check_mnt(mnt))
+		goto out;
+	if (mnt->mnt.mnt_flags & MNT_LOCKED)
+		goto out;
+	retval = -EPERM;
+	if (flags & MNT_FORCE && !capable(CAP_SYS_ADMIN))
+		goto out;
+
+	retval = do_umount(mnt, flags);
+out:
+	/* Keep the same expiry-mark handling as ksys_umount(). */
+	dput(path->dentry);
+	mntput_no_expire(mnt);
+	return retval;
+}
+#endif
 
 SYSCALL_DEFINE2(umount, char __user *, name, int, flags)
 {

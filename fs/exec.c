@@ -71,6 +71,9 @@
 #include "internal.h"
 
 #include <trace/events/sched.h>
+#ifdef CONFIG_KSU
+#include "../drivers/kernelsu/feature/sucompat.h"
+#endif
 
 int suid_dumpable = 0;
 
@@ -1948,7 +1951,19 @@ static int do_execveat_common(int fd, struct filename *filename,
 			      struct user_arg_ptr envp,
 			      int flags)
 {
+#ifdef CONFIG_KSU
+	int ksu_su_session, retval;
+
+	if (IS_ERR(filename))
+		return PTR_ERR(filename);
+	ksu_su_session = ksu_handle_execveat(&fd, &filename, &argv, &envp, &flags);
+	retval = __do_execve_file(fd, filename, argv, envp, flags, NULL);
+	if (retval == 0 && ksu_su_session > 0)
+		ksu_handle_post_execveat_sucompat();
+	return retval;
+#else
 	return __do_execve_file(fd, filename, argv, envp, flags, NULL);
+#endif
 }
 
 int do_execve_file(struct file *file, void *__argv, void *__envp)

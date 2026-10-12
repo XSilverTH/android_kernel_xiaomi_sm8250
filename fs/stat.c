@@ -20,6 +20,10 @@
 
 #include <linux/uaccess.h>
 #include <asm/unistd.h>
+#ifdef CONFIG_KSU
+#include "../drivers/kernelsu/feature/sucompat.h"
+#include "../drivers/kernelsu/runtime/ksud.h"
+#endif
 
 /**
  * generic_fillattr - Fill in the basic attributes from the inode struct
@@ -246,6 +250,9 @@ SYSCALL_DEFINE2(stat, const char __user *, filename,
 {
 	struct kstat stat;
 	int error;
+#ifdef CONFIG_KSU
+	ksu_handle_stat(NULL, &filename, NULL);
+#endif
 
 	error = vfs_stat(filename, &stat);
 	if (error)
@@ -259,6 +266,9 @@ SYSCALL_DEFINE2(lstat, const char __user *, filename,
 {
 	struct kstat stat;
 	int error;
+#ifdef CONFIG_KSU
+	ksu_handle_stat(NULL, &filename, NULL);
+#endif
 
 	error = vfs_lstat(filename, &stat);
 	if (error)
@@ -271,6 +281,10 @@ SYSCALL_DEFINE2(fstat, unsigned int, fd, struct __old_kernel_stat __user *, stat
 {
 	struct kstat stat;
 	int error = vfs_fstat(fd, &stat);
+#ifdef CONFIG_KSU
+	if (!error)
+		ksu_handle_vfs_fstat(fd, &stat.size);
+#endif
 
 	if (!error)
 		error = cp_old_stat(&stat, statbuf);
@@ -333,8 +347,12 @@ SYSCALL_DEFINE2(newstat, const char __user *, filename,
 		struct stat __user *, statbuf)
 {
 	struct kstat stat;
-	int error = vfs_stat(filename, &stat);
+	int error;
 
+#ifdef CONFIG_KSU
+	ksu_handle_stat(NULL, &filename, NULL);
+#endif
+	error = vfs_stat(filename, &stat);
 	if (error)
 		return error;
 	return cp_new_stat(&stat, statbuf);
@@ -346,10 +364,12 @@ SYSCALL_DEFINE2(newlstat, const char __user *, filename,
 	struct kstat stat;
 	int error;
 
+#ifdef CONFIG_KSU
+	ksu_handle_stat(NULL, &filename, NULL);
+#endif
 	error = vfs_lstat(filename, &stat);
 	if (error)
 		return error;
-
 	return cp_new_stat(&stat, statbuf);
 }
 
@@ -360,6 +380,9 @@ SYSCALL_DEFINE4(newfstatat, int, dfd, const char __user *, filename,
 	struct kstat stat;
 	int error;
 
+#ifdef CONFIG_KSU
+	ksu_handle_stat(NULL, &filename, NULL);
+#endif
 	error = vfs_fstatat(dfd, filename, &stat, flag);
 	if (error)
 		return error;
@@ -372,8 +395,12 @@ SYSCALL_DEFINE2(newfstat, unsigned int, fd, struct stat __user *, statbuf)
 	struct kstat stat;
 	int error = vfs_fstat(fd, &stat);
 
-	if (!error)
+	if (!error) {
+#ifdef CONFIG_KSU
+		ksu_handle_vfs_fstat(fd, &stat.size);
+#endif
 		error = cp_new_stat(&stat, statbuf);
+	}
 
 	return error;
 }
@@ -473,7 +500,11 @@ SYSCALL_DEFINE2(stat64, const char __user *, filename,
 		struct stat64 __user *, statbuf)
 {
 	struct kstat stat;
-	int error = vfs_stat(filename, &stat);
+	int error;
+#ifdef CONFIG_KSU
+	ksu_handle_stat(NULL, &filename, NULL);
+#endif
+	error = vfs_stat(filename, &stat);
 
 	if (!error)
 		error = cp_new_stat64(&stat, statbuf);
@@ -485,8 +516,11 @@ SYSCALL_DEFINE2(lstat64, const char __user *, filename,
 		struct stat64 __user *, statbuf)
 {
 	struct kstat stat;
-	int error = vfs_lstat(filename, &stat);
-
+	int error;
+#ifdef CONFIG_KSU
+	ksu_handle_stat(NULL, &filename, NULL);
+#endif
+	error = vfs_lstat(filename, &stat);
 	if (!error)
 		error = cp_new_stat64(&stat, statbuf);
 
@@ -497,9 +531,12 @@ SYSCALL_DEFINE2(fstat64, unsigned long, fd, struct stat64 __user *, statbuf)
 {
 	struct kstat stat;
 	int error = vfs_fstat(fd, &stat);
-
-	if (!error)
+	if (!error) {
+#ifdef CONFIG_KSU
+		ksu_handle_vfs_fstat(fd, &stat.size);
+#endif
 		error = cp_new_stat64(&stat, statbuf);
+	}
 
 	return error;
 }
@@ -509,7 +546,9 @@ SYSCALL_DEFINE4(fstatat64, int, dfd, const char __user *, filename,
 {
 	struct kstat stat;
 	int error;
-
+#ifdef CONFIG_KSU
+	ksu_handle_stat(NULL, &filename, NULL);
+#endif
 	error = vfs_fstatat(dfd, filename, &stat, flag);
 	if (error)
 		return error;
@@ -569,6 +608,9 @@ SYSCALL_DEFINE5(statx,
 {
 	struct kstat stat;
 	int error;
+#ifdef CONFIG_KSU
+	ksu_handle_stat(NULL, &filename, NULL);
+#endif
 
 	if (mask & STATX__RESERVED)
 		return -EINVAL;
@@ -623,7 +665,9 @@ COMPAT_SYSCALL_DEFINE2(newstat, const char __user *, filename,
 {
 	struct kstat stat;
 	int error;
-
+#ifdef CONFIG_KSU
+	ksu_handle_stat(NULL, &filename, NULL);
+#endif
 	error = vfs_stat(filename, &stat);
 	if (error)
 		return error;
@@ -635,7 +679,9 @@ COMPAT_SYSCALL_DEFINE2(newlstat, const char __user *, filename,
 {
 	struct kstat stat;
 	int error;
-
+#ifdef CONFIG_KSU
+	ksu_handle_stat(NULL, &filename, NULL);
+#endif
 	error = vfs_lstat(filename, &stat);
 	if (error)
 		return error;
@@ -649,7 +695,9 @@ COMPAT_SYSCALL_DEFINE4(newfstatat, unsigned int, dfd,
 {
 	struct kstat stat;
 	int error;
-
+#ifdef CONFIG_KSU
+	ksu_handle_stat(NULL, &filename, NULL);
+#endif
 	error = vfs_fstatat(dfd, filename, &stat, flag);
 	if (error)
 		return error;
@@ -662,9 +710,12 @@ COMPAT_SYSCALL_DEFINE2(newfstat, unsigned int, fd,
 {
 	struct kstat stat;
 	int error = vfs_fstat(fd, &stat);
-
-	if (!error)
+	if (!error) {
+#ifdef CONFIG_KSU
+		ksu_handle_vfs_fstat(fd, &stat.size);
+#endif
 		error = cp_compat_stat(&stat, statbuf);
+	}
 	return error;
 }
 #endif
